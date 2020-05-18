@@ -11,6 +11,7 @@
 //! - `c2d-messages`: Enables cloud to device messaging
 //! - `twin-properties`: Enables device twin property updates
 //! - `direct-methods`: Enables listening for direct method invocations
+//! - `file-upload`: Enables uploads of files using IoTHub
 //!
 //! ### Disabling capabilities
 //! If not all features are required, disable the default features and add only desired.
@@ -63,3 +64,5 @@ pub mod client;
 /// Message types for communicating with the IoT Hub
 pub mod message;
 pub(crate) mod mqtt_transport;
+/// The File Upload component
+pub mod file_upload;

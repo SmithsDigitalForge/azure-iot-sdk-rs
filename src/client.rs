@@ -4,6 +4,7 @@ use sha2::Sha256;
 
 use crate::message::Message;
 use crate::mqtt_transport::{MessageHandler, MqttTransport, Transport};
+use crate::file_upload::send_file_to_iot_hub;
 
 const DEVICEID_KEY: &str = "DeviceId";
 const HOSTNAME_KEY: &str = "HostName";
@@ -14,6 +15,8 @@ const SHAREDACCESSKEY_KEY: &str = "SharedAccessKey";
 pub struct IoTHubClient {
     device_id: String,
     transport: MqttTransport,
+    hub: String,
+    sas: String,
 }
 
 fn generate_sas(hub: &str, device_id: &str, key: &str, expiry_timestamp: i64) -> String {
@@ -131,11 +134,14 @@ impl IoTHubClient {
     /// }
     /// ```
     pub async fn new(hub_name: String, device_id: String, sas: String) -> Self {
-        let transport = MqttTransport::new(hub_name, device_id.clone(), sas).await;
+        let hub = hub_name.clone();
+        let transport = MqttTransport::new(hub_name, device_id.clone(), sas.clone()).await;
 
         Self {
             device_id,
             transport,
+            hub,
+            sas
         }
     }
 
@@ -208,6 +214,31 @@ impl IoTHubClient {
     /// ```
     pub async fn send_property_update(&mut self, request_id: &str, body: &str) {
         self.transport.send_property_update(request_id, body).await;
+    }
+
+    /// Send a file to the cloud
+    ///
+    /// IoTHub supports the ability for a device to send a file to the cloud via an upload mechanism.
+    /// This involves first POST-ing the filename to a specific URL as a JSON encoded struct.  IoTHub
+    /// will then respond with a SAS token and details containing information on where the file is to
+    /// be uploaded.  After the file is uploaded, the status of the upload is posted back to IoTHub.
+    ///
+    /// # Arguments
+    ///
+    /// * `filename` - The name of the file to be uploaded.  This is the name of the file in the cloud.
+    /// * `sas` - The shared access signature for the device connection.  Used to create the client.
+    /// * `contents` - Provide the contents of the file.
+    ///
+    /// # Example
+    /// ```no_run
+    /// ```
+    #[cfg(feature = "file-upload")]
+    pub async fn send_file_to_cloud(&self, key: String, filename: String) -> Result<(), Box<dyn std::error::Error>>
+    {
+     //   let expiry = (Utc::now() + Duration::days(1)).timestamp();
+       // let sas = generate_sas(&self.hub, &self.device_id, &key, expiry);
+        let sas = &self.sas;
+        send_file_to_iot_hub(&filename, &self.hub, &self.device_id, &sas).await
     }
 
     /// Define the cloud to device message handler
