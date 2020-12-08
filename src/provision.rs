@@ -47,6 +47,8 @@ pub enum ErrorKind {
     ProvisionRequestReplyMissingOperationId,
     /// Timed out trying to get the IoT Hub for your device ID
     FailedToGetIotHub,
+    /// Registration request came back without an IoTHub
+    NoHubFound
 }
 
 impl std::fmt::Display for ErrorKind {
@@ -101,6 +103,11 @@ pub async fn get_iothub_from_provision_service(
         device_id = device_id,
         api = DPS_API_VERSION
     );
+    info!("Scope ID {}", scope_id);
+    info!("device ID {}", device_id);
+    info!("signing key {}", device_key);
+    info!("Registration url {}", url);
+    info!("SAS key {}", sas);
     let mut map = serde_json::Map::new();
     map.insert(
         "registrationId".to_string(),
@@ -154,6 +161,10 @@ pub async fn get_iothub_from_provision_service(
             let reply: serde_json::Map<String, serde_json::Value> =
                 serde_json::from_slice(&body).unwrap();
             let registration_state = reply["registrationState"].as_object().unwrap();
+            info!("registration_state {:?}", registration_state);
+            if !registration_state.contains_key("assignedHub") {
+                return Err(Box::new(ErrorKind::NoHubFound));
+            }
             let hub = registration_state["assignedHub"].as_str().unwrap();
             hubname = hub.to_string();
             break;
